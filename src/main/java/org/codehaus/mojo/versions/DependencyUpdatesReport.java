@@ -45,179 +45,162 @@ import org.codehaus.plexus.util.StringUtils;
  * @author Stephen Connolly
  * @since 1.0-beta-1
  */
-@Mojo( name = "dependency-updates-report", requiresProject = true, requiresDependencyResolution = ResolutionScope.RUNTIME, threadSafe = true)
+@Mojo(name = "dependency-updates-report", requiresProject = true, requiresDependencyResolution = ResolutionScope.RUNTIME, threadSafe = true)
 public class DependencyUpdatesReport
-    extends AbstractVersionsReport
-{
+        extends AbstractVersionsReport {
 
     /**
      * Whether to process the <code>dependencyManagement</code> in pom or not.
      * 
      * @since 2.5
      */
-    @Parameter( property = "processDependencyManagement", defaultValue = "true" )
+    @Parameter(property = "processDependencyManagement", defaultValue = "true")
     private boolean processDependencyManagement;
 
     /**
      * Whether to process the depdendencyManagement part transitive or not.
      * In case of <code>&lt;type&gt;pom&lt;/type&gt;</code>and
      * <code>&lt;scope&gt;import&lt;/scope&gt;</code> this means
-     * by default to report also the imported dependencies. 
+     * by default to report also the imported dependencies.
      * If processTransitive is set to <code>false</code> the report will only show
      * updates of the imported pom it self.
      * 
      * @since 2.5 Note: Currently in experimental state.
      */
-    @Parameter( property = "processDependencyManagementTransitive", defaultValue = "true" )
+    @Parameter(property = "processDependencyManagementTransitive", defaultValue = "true")
     private boolean processDependencyManagementTransitive;
 
     /**
      * Report formats (html and/or xml). HTML by default.
      * 
      */
-    @Parameter( property = "dependencyUpdatesReportFormats", defaultValue = "html" )
+    @Parameter(property = "formats", defaultValue = "html")
     private String[] formats = new String[] { "html" };
 
     /**
      * {@inheritDoc}
      */
-    public boolean isExternalReport()
-    {
+    public boolean isExternalReport() {
         return false;
     }
 
     /**
      * {@inheritDoc}
      */
-    public boolean canGenerateReport()
-    {
+    public boolean canGenerateReport() {
         return true;
     }
 
     /**
-     * generates an empty report in case there are no sources to generate a report with
+     * generates an empty report in case there are no sources to generate a report
+     * with
      *
      * @param locale the locale to generate the report for.
-     * @param sink the report formatting tool
+     * @param sink   the report formatting tool
      */
-    protected void doGenerateReport( Locale locale, Sink sink )
-        throws MavenReportException
-    {
-        Set<Dependency> dependencies = new TreeSet<>( new DependencyComparator() );
-        dependencies.addAll( getProject().getDependencies() );
+    protected void doGenerateReport(Locale locale, Sink sink)
+            throws MavenReportException {
+        System.out.println("**** formats: " + String.join(",", formats));
+        Set<Dependency> dependencies = new TreeSet<>(new DependencyComparator());
+        dependencies.addAll(getProject().getDependencies());
 
-        Set<Dependency> dependencyManagement = new TreeSet<>( new DependencyComparator() );
+        Set<Dependency> dependencyManagement = new TreeSet<>(new DependencyComparator());
 
-        if ( processDependencyManagementTransitive )
-        {
-            if ( getProject().getDependencyManagement() != null
-                && getProject().getDependencyManagement().getDependencies() != null )
-            {
-                for ( Dependency dep : getProject().getDependencyManagement().getDependencies() )
-                {
-                    getLog().debug( "Dpmg: " + dep.getGroupId() + ":" + dep.getArtifactId() + ":" + dep.getVersion()
-                        + ":" + dep.getType() + ":" + dep.getScope() );
+        if (processDependencyManagementTransitive) {
+            if (getProject().getDependencyManagement() != null
+                    && getProject().getDependencyManagement().getDependencies() != null) {
+                for (Dependency dep : getProject().getDependencyManagement().getDependencies()) {
+                    getLog().debug("Dpmg: " + dep.getGroupId() + ":" + dep.getArtifactId() + ":" + dep.getVersion()
+                            + ":" + dep.getType() + ":" + dep.getScope());
                 }
-                dependencyManagement.addAll( getProject().getDependencyManagement().getDependencies() );
+                dependencyManagement.addAll(getProject().getDependencyManagement().getDependencies());
             }
-        }
-        else
-        {
-            if ( getProject().getOriginalModel().getDependencyManagement() != null
-                && getProject().getOriginalModel().getDependencyManagement().getDependencies() != null )
-            {
+        } else {
+            if (getProject().getOriginalModel().getDependencyManagement() != null
+                    && getProject().getOriginalModel().getDependencyManagement().getDependencies() != null) {
                 // Using the original model to get the original dependencyManagement entries and
                 // not the interpolated model.
                 // TODO: I'm not 100% sure if this will work correctly in all cases.
-                for ( Dependency dep : getProject().getOriginalModel().getDependencyManagement().getDependencies() )
-                {
-                    getLog().debug( "Original Dpmg: " + dep.getGroupId() + ":" + dep.getArtifactId() + ":"
-                        + dep.getVersion() + ":" + dep.getType() + ":" + dep.getScope() );
+                for (Dependency dep : getProject().getOriginalModel().getDependencyManagement().getDependencies()) {
+                    getLog().debug("Original Dpmg: " + dep.getGroupId() + ":" + dep.getArtifactId() + ":"
+                            + dep.getVersion() + ":" + dep.getType() + ":" + dep.getScope());
                 }
-                dependencyManagement.addAll( getProject().getOriginalModel().getDependencyManagement().getDependencies() );
+                dependencyManagement
+                        .addAll(getProject().getOriginalModel().getDependencyManagement().getDependencies());
             }
         }
 
-        if ( processDependencyManagement )
-        {
-            dependencies = removeDependencyManagment( dependencies, dependencyManagement );
+        if (processDependencyManagement) {
+            dependencies = removeDependencyManagment(dependencies, dependencyManagement);
         }
 
-        try
-        {
-            Map<Dependency, ArtifactVersions> dependencyUpdates =
-                getHelper().lookupDependenciesUpdates( dependencies, false );
+        try {
+            Map<Dependency, ArtifactVersions> dependencyUpdates = getHelper().lookupDependenciesUpdates(dependencies,
+                    false);
 
             Map<Dependency, ArtifactVersions> dependencyManagementUpdates = Collections.emptyMap();
-            if ( processDependencyManagement )
-            {
-                dependencyManagementUpdates = getHelper().lookupDependenciesUpdates( dependencyManagement, false );
+            if (processDependencyManagement) {
+                dependencyManagementUpdates = getHelper().lookupDependenciesUpdates(dependencyManagement, false);
             }
-            for ( String format : formats )
-            {
-                if ( "html".equals( format ) )
-                {
-                    DependencyUpdatesRenderer renderer =
-                        new DependencyUpdatesRenderer( sink, getI18n(), getOutputName(), locale, dependencyUpdates,
-                                                       dependencyManagementUpdates );
+            for (String format : formats) {
+                if ("html".equals(format)) {
+                    DependencyUpdatesRenderer renderer = new DependencyUpdatesRenderer(sink, getI18n(), getOutputName(),
+                            locale, dependencyUpdates,
+                            dependencyManagementUpdates);
                     renderer.render();
 
-                }
-                else if ( "xml".equals( format ) )
-                {
-                   File outputDir = new File(getProject().getBuild().getDirectory());
-                   if (!outputDir.exists())
-                    {
+                } else if ("xml".equals(format)) {
+
+                    File outputDir = new File(
+                            StringUtils.isNotBlank(this.getOutputDirectory()) ? this.getOutputDirectory()
+                                    : getProject().getBuild().getDirectory());
+                    if (!outputDir.exists()) {
                         outputDir.mkdirs();
                     }
-                    String outputFile =
-                        outputDir.getAbsolutePath() + File.separator + getOutputName() + ".xml";
-                    DependencyUpdatesXmlRenderer xmlGenerator =
-                        new DependencyUpdatesXmlRenderer( dependencyUpdates, dependencyManagementUpdates, outputFile );
+                    String outputFile = outputDir.getAbsolutePath() + File.separator + getOutputName() + ".xml";
+                    DependencyUpdatesXmlRenderer xmlGenerator = new DependencyUpdatesXmlRenderer(dependencyUpdates,
+                            dependencyManagementUpdates, outputFile);
                     xmlGenerator.render();
                 }
             }
-        }
-        catch ( InvalidVersionSpecificationException| ArtifactMetadataRetrievalException e )
-        {
-            throw new MavenReportException( e.getMessage(), e );
+        } catch (InvalidVersionSpecificationException | ArtifactMetadataRetrievalException e) {
+            throw new MavenReportException(e.getMessage(), e);
         }
     }
 
     /**
-     * Returns a set of dependencies where the dependencies which are defined in the dependency management section have
+     * Returns a set of dependencies where the dependencies which are defined in the
+     * dependency management section have
      * been filtered out.
      *
-     * @param dependencies The set of dependencies.
-     * @param dependencyManagement The set of dependencies from the dependency management section.
-     * @return A new set of dependencies which are from the set of dependencies but not from the set of dependency
+     * @param dependencies         The set of dependencies.
+     * @param dependencyManagement The set of dependencies from the dependency
+     *                             management section.
+     * @return A new set of dependencies which are from the set of dependencies but
+     *         not from the set of dependency
      *         management dependencies.
      * @since 1.0-beta-1
      */
-    private static Set<Dependency> removeDependencyManagment( Set<Dependency> dependencies, Set<Dependency> dependencyManagement )
-    {
-        Set<Dependency> result = new TreeSet<>( new DependencyComparator() );
-        for ( Dependency c : dependencies )
-        {
+    private static Set<Dependency> removeDependencyManagment(Set<Dependency> dependencies,
+            Set<Dependency> dependencyManagement) {
+        Set<Dependency> result = new TreeSet<>(new DependencyComparator());
+        for (Dependency c : dependencies) {
             boolean matched = false;
             Iterator<Dependency> j = dependencyManagement.iterator();
-            while ( !matched && j.hasNext() )
-            {
+            while (!matched && j.hasNext()) {
                 Dependency t = j.next();
-                if ( StringUtils.equals( t.getGroupId(), c.getGroupId() )
-                    && StringUtils.equals( t.getArtifactId(), c.getArtifactId() )
-                    && ( t.getScope() == null || StringUtils.equals( t.getScope(), c.getScope() ) )
-                    && ( t.getClassifier() == null || StringUtils.equals( t.getClassifier(), c.getClassifier() ) )
-                    && ( c.getVersion() == null || t.getVersion() == null
-                        || StringUtils.equals( t.getVersion(), c.getVersion() ) ) )
-                {
+                if (StringUtils.equals(t.getGroupId(), c.getGroupId())
+                        && StringUtils.equals(t.getArtifactId(), c.getArtifactId())
+                        && (t.getScope() == null || StringUtils.equals(t.getScope(), c.getScope()))
+                        && (t.getClassifier() == null || StringUtils.equals(t.getClassifier(), c.getClassifier()))
+                        && (c.getVersion() == null || t.getVersion() == null
+                                || StringUtils.equals(t.getVersion(), c.getVersion()))) {
                     matched = true;
                     break;
                 }
             }
-            if ( !matched )
-            {
-                result.add( c );
+            if (!matched) {
+                result.add(c);
             }
         }
         return result;
@@ -226,8 +209,7 @@ public class DependencyUpdatesReport
     /**
      * {@inheritDoc}
      */
-    public String getOutputName()
-    {
+    public String getOutputName() {
         return "dependency-updates-report";
     }
 
